@@ -1,0 +1,71 @@
+- hosts: all
+  tasks:
+  -  name: "Configuring yum repo for Docker"
+     yum_repository:
+             baseurl: "https://download.docker.com/linux/centos/7/x86_64/stable/"
+             name: "Docker_repo"
+             description: "This is docker repo"
+             gpgcheck: no
+
+  -  name: "Installing python3"
+     package:
+             name: "python3"
+             state: present
+
+  -  name: "Installing stable docker version"
+     package:
+             name: "docker-ce-18.09.0-3.el7.x86_64"
+             state: present
+
+  -  name: "Installing docker module for python"
+     pip:
+             name: "docker"
+
+  -  name: "Starting and enabling docker service"
+     service:
+             name: "docker"
+             state: started
+             enabled: yes
+
+  -  name: "creating directory"
+     file:
+             path: "/webserver"
+             state: directory
+
+  -  name: "copying file in directory"
+     copy:
+             src: "./index.html"
+             dest: "/webserver"
+
+  -  name: "pulling httpd docker image"
+     docker_image:
+             name: "httpd"
+             source: pull
+
+
+  -  name: "setting firewall rule"
+     firewalld:
+             immediate: yes
+             service: "http"
+             state: enabled
+             permanent: yes
+
+  -  name: "Launching httpd container"
+     docker_container:
+             name: "httpd_server"
+             image: httpd
+             state: started
+             exposed_ports:
+             - "80"
+             ports: 
+             - "4567:80"
+             volumes:
+             - "/webserver:/usr/local/apache2/htdocs/"
+
+     register: container_data
+
+  -  name: "Gertting IP of container"
+     debug:
+             var: container_data['ansible_facts']['docker_container']['NetworkSettings']['IPAddress']
+
+
